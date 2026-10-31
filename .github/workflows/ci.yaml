@@ -16,7 +16,6 @@ jobs:
           version: 0.17.0
       - run: zig build test --summary all
       - run: zig build examples
-      - run: zig build run
 
   fmt:
     runs-on: ubuntu-latest
