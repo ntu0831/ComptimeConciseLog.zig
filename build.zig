@@ -85,9 +85,7 @@ fn addExamples(b: *std.Build, ctx: *Context) !void {
             }),
         });
         const run = b.addRunArtifact(exe);
-        // run.cwd = .{.src_path = }
-        // b.addOptions().addOptionPathDirectory(".git/", .{ .relative = .{ .base = .install_bin } })
-        run.cwd = .{ .relative = .{ .base = .install_bin } };
+        run.cwd = exe.getEmittedBinDirectory();
         if (example.expectStdErrMatch) |e| run.expectStdErrMatch(e);
         if (example.expectStdOutMatch) |e| run.expectStdOutMatch(e);
         try ctx.examples_test.append(gpa, run);
