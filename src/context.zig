@@ -11,8 +11,6 @@ const RawOutputWriter = @import("writer.zig").RawOutputWriter;
 const Formatter = @import("formatter.zig").Formatter;
 const Metrics = @import("metrics.zig").Metrics;
 
-pub const newline: []const u8 = "\n";
-
 pub const LogEvent = []u8;
 
 const Pool = struct {
@@ -167,7 +165,7 @@ pub const Context = struct {
                     errdefer arena.free(pool_buffer_storage);
                     const pool_free_storage = try arena.alloc(LogEvent, count);
                     errdefer arena.free(pool_free_storage);
-                    const pool_pending_storage = try arena.alloc(LogEvent, count * 2);
+                    const pool_pending_storage = try arena.alloc(LogEvent, count);
                     errdefer arena.free(pool_pending_storage);
 
                     var free_pool_buf = try arena.alloc([]u8, count);
@@ -235,25 +233,16 @@ fn loop(ctx: *Context) void {
     defer _ = io.swapCancelProtection(old_protection);
 
     var storage: [options.max_buffers_per_batch][]u8 = undefined;
-    var storage2: [options.max_buffers_per_batch][]u8 = undefined;
 
     while (true) {
-        var idx: usize = 0;
         const count = pending.getUncancelable(io, &storage, 1) catch |e| switch (e) {
             error.Closed => return,
         };
         const valid = storage[0..count];
-
-        for (valid) |buf| {
-            writer.writeAll(buf) catch ow.errorhandler.func(io, writer);
-            if (buf.ptr != newline.ptr) {
-                storage2[idx] = buf;
-                idx += 1;
-            }
-        }
-
-        _ = free.putUncancelable(io, storage2[0..idx], idx) catch |e| switch (e) {
+        defer _ = free.putUncancelable(io, valid, count) catch |e| switch (e) {
             error.Closed => {},
         };
+
+        for (valid) |buf| writer.writeAll(buf) catch ow.errorhandler.func(io, writer);
     }
 }

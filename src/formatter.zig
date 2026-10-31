@@ -23,7 +23,7 @@ pub fn Formatter(options: Options) type {
             allocator: std.mem.Allocator,
             io: std.Io,
             ts: std.Io.Timestamp,
-        ) error{WriteFailed}!void {
+        ) std.Io.Writer.Error!void {
             const tokens = options.pattern.tokens;
 
             const pattern_has_datetime: bool = comptime blk: {
@@ -93,6 +93,8 @@ pub fn Formatter(options: Options) type {
                     date.millisecond, date.microsecond, date.nanosecond,
                 }),
             };
+
+            try w.writeByte('\n');
         }
     };
 }

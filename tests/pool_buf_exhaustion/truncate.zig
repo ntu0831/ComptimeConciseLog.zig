@@ -25,7 +25,7 @@ fn test_truncate(init: std.process.Init) !void {
     Log.info("{s}", .{"1234567890"});
     cclog.deinit(init.io);
 
-    try expectEqualStrings("12345678\n", w.written());
+    try expectEqualStrings("1234567\n", w.written());
 }
 
 pub fn main(init: std.process.Init) !void {

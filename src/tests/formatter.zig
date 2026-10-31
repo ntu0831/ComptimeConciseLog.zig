@@ -37,12 +37,13 @@ test "none userformatter" {
         try formatter.exec(.info, .scope, "{s}", .{"message"}, &allocating.writer, std.testing.allocator, std.testing.io, .fromNanoseconds(0));
         try formatter.exec(.warn, .scope, "{s}", .{"message"}, &allocating.writer, std.testing.allocator, std.testing.io, .fromNanoseconds(0));
 
-        const expected = std.fmt.comptimePrint("{s}{s}{s}{s}", .{
-            "message|scope|debug|D|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00",
-            "message|scope|error|E|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00",
-            "message|scope|info|I|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00",
-            "message|scope|warning|W|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00",
-        });
+        const expected =
+            \\message|scope|debug|D|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00
+            \\message|scope|error|E|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00
+            \\message|scope|info|I|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00
+            \\message|scope|warning|W|1970-01-01T14:00:00.000000000+14:00|1970-01-01T14:00:00.000000000Z|000|000|000|1970|70|01|01|14|00|00|14:00:00|01/01/70|+1400|+14:00
+            \\
+        ;
         try expectEqualStrings(expected, allocating.written());
     }
     {
@@ -56,12 +57,13 @@ test "none userformatter" {
         try formatter.exec(.info, .scope, "{s}", .{"message"}, &allocating.writer, std.testing.allocator, std.testing.io, .fromNanoseconds(0));
         try formatter.exec(.warn, .scope, "{s}", .{"message"}, &allocating.writer, std.testing.allocator, std.testing.io, .fromNanoseconds(0));
 
-        const expected = std.fmt.comptimePrint("{s}{s}{s}{s}", .{
-            "message|scope|debug|D|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00",
-            "message|scope|error|E|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00",
-            "message|scope|info|I|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00",
-            "message|scope|warning|W|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00",
-        });
+        const expected =
+            \\message|scope|debug|D|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00
+            \\message|scope|error|E|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00
+            \\message|scope|info|I|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00
+            \\message|scope|warning|W|1969-12-31T12:00:00.000000000-12:00|1969-12-31T12:00:00.000000000Z|000|000|000|1969|69|12|31|12|00|00|12:00:00|12/31/69|-1200|-12:00
+            \\
+        ;
         try expectEqualStrings(expected, allocating.written());
     }
 }
@@ -108,7 +110,7 @@ test "userformatter" {
     var allocating: std.Io.Writer.Allocating = .init(gpa);
     defer allocating.deinit();
     try formatter.exec(.info, .userfomatter, "", .{}, &allocating.writer, gpa, io, .fromNanoseconds(0));
-    try expectEqualStrings("0-test-test", allocating.written());
+    try expectEqualStrings("0-test-test\n", allocating.written());
 }
 
 const io = std.testing.io;

@@ -1,8 +1,7 @@
 const std = @import("std");
 
-const context = @import("context.zig");
-const Context = context.Context;
 const options = @import("config.zig").options;
+const Context = @import("context.zig").Context;
 
 fn enabled(now: i8, target: i8) bool {
     return now >= target;
@@ -52,7 +51,7 @@ pub fn log(
             lw.interface.flush() catch return;
         },
         inline .async, .concurrent => {
-            var storage: [options.max_buffers_per_record + 1][]u8 = undefined;
+            var storage: [options.max_buffers_per_record][]u8 = undefined;
 
             var lw = NonBlockingLoggerWriter.init(&storage);
             defer lw.deinit();
@@ -127,7 +126,6 @@ const BlockingloggerWriter = struct {
 // deinit -> free
 const NonBlockingLoggerWriter = struct {
     storage: [][]u8,
-    remaining: [][]u8,
     used: usize,
     err: ?anyerror = null,
     interface: std.Io.Writer,
@@ -135,7 +133,7 @@ const NonBlockingLoggerWriter = struct {
     const Error = std.Io.QueueClosedError || std.Io.Writer.Error || error{ Dropped, Truncated };
 
     fn init(buf: [][]u8) @This() {
-        return .{ .storage = buf, .remaining = buf[0 .. buf.len - 1], .used = 0, .interface = .{
+        return .{ .storage = buf, .used = 0, .interface = .{
             .buffer = &.{},
             .vtable = &.{
                 .drain = drain,
@@ -154,7 +152,7 @@ const NonBlockingLoggerWriter = struct {
     }
 
     inline fn notNeedFlushWhenErr(self: @This()) bool {
-        // 发生截断时需要flush，发生截断时err为空
+        // 发生截断时需要flush
         return self.err.? != Error.Truncated;
     }
 
@@ -189,6 +187,11 @@ const NonBlockingLoggerWriter = struct {
         const end = memcopy(data, splat, primary, secondary) catch |e| {
             lw.err = e;
             w.end = pool_size;
+
+            if (secondary.len > 0)
+                secondary[secondary.len - 1][pool_size - 1] = '\n' // pool policy truncated
+            else // seconday.len == 0 when record truncated
+                w.buffer[pool_size - 1] = '\n'; // record policy truncated
             return error.WriteFailed;
         };
 
@@ -206,11 +209,7 @@ const NonBlockingLoggerWriter = struct {
         const storage = lw.storage;
         const used = lw.used;
         storage[used - 1] = storage[used - 1][0..w.end];
-        storage[used] = @constCast(context.newline);
-        const used_storage = storage[0 .. used + 1];
-
-        // const used_storage = lw.storage[0..used];
-        // used_storage[used - 1] = used_storage[used - 1][0..w.end];
+        const used_storage = storage[0..used];
 
         lw.submitBuf(used_storage) catch |e| switch (e) {
             error.Closed => {
@@ -260,7 +259,8 @@ const NonBlockingLoggerWriter = struct {
 
     const acquireBufError = std.Io.QueueClosedError || error{Dropped};
     inline fn acquireBuf(self: *@This(), count: usize) acquireBufError![][]u8 {
-        const remaining = self.remaining;
+        const remaining = self.storage[self.used..];
+
         const record_policy = comptime switch (options.mode) {
             inline .sync => unreachable,
             inline .async, .concurrent => |c| c.on_record_exhausted,
@@ -269,6 +269,7 @@ const NonBlockingLoggerWriter = struct {
             inline .sync => unreachable,
             inline .async, .concurrent => |c| c.on_pool_exhausted,
         };
+
         const want = if (remaining.len < count) switch (record_policy) {
             inline .drop => return error.Dropped, // TODO metrics
             inline .truncate => remaining.len, // TODO metrics
@@ -276,21 +277,23 @@ const NonBlockingLoggerWriter = struct {
 
         const pool_free = &global.data.pool.free;
 
-        const real = switch (pool_policy) {
-            inline .block => try pool_free.getUncancelable(global.io, remaining[0..want], want),
-            inline .truncate => try pool_free.getUncancelable(global.io, remaining[0..want], 0), // TODO metrics
-            inline .drop => blk: { // TODO metrics
-                const real = try pool_free.getUncancelable(global.io, remaining[0..want], 0);
-                if (real != want) {
-                    self.used += real;
-                    return error.Dropped;
-                }
-                break :blk real;
+        const real = blk: switch (pool_policy) {
+            inline .block => {
+                const n = try pool_free.getUncancelable(global.io, remaining[0..want], want);
+                self.used += n;
+                break :blk n;
+            },
+            inline .truncate => { // TODO metrics
+                const n = try pool_free.getUncancelable(global.io, remaining[0..want], 0);
+                self.used += n;
+                break :blk n;
+            },
+            inline .drop => { // TODO metrics
+                const n = try pool_free.getUncancelable(global.io, remaining[0..want], 0);
+                self.used += n;
+                if (n != want) return error.Dropped else break :blk n;
             },
         };
-
-        self.used += real;
-        self.remaining = remaining[real..];
 
         for (0..real) |i| remaining[i] = remaining[i].ptr[0..pool_size];
         return remaining[0..real];
