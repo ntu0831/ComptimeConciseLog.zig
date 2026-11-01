@@ -111,7 +111,6 @@ const BlockingloggerWriter = struct {
     fn flush(w: *std.Io.Writer) std.Io.Writer.Error!void {
         const lw: *@This() = @alignCast(@fieldParentPtr("interface", w));
         const writer = global.ow.interface;
-        writer.writeByte('\n') catch |e| return lw.emitError(e);
         writer.flush() catch |e| return lw.emitError(e);
     }
 
