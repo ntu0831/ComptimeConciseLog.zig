@@ -243,6 +243,6 @@ fn loop(ctx: *Context) void {
             error.Closed => {},
         };
 
-        for (valid) |buf| writer.writeAll(buf) catch ow.errorhandler.func(io, writer);
+        writer.writeVecAll(@ptrCast(valid)) catch ow.errorhandler.func(io, writer);
     }
 }
