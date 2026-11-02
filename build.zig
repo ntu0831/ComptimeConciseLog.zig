@@ -2,55 +2,30 @@ const std = @import("std");
 
 const name = "ComptimeConciseLog";
 
+// zig build docs
+// zig build examples
+// zig build test
+// zig build test-unit
+// zig build test-examples
+// zig build test-integration
+
 pub fn build(b: *std.Build) !void {
     var ctx: Context = .{
         .optimize = b.standardOptimizeOption(.{}),
         .target = b.standardTargetOptions(.{}),
     };
 
-    // zig build docs
-    // zig build examples
-    // zig build test
-    // zig build test-unit
-    // zig build test-examples
-    // zig build test-integration
-
     try addModule(b, &ctx);
     try addExamples(b, &ctx);
     try addIntegrationTest(b, &ctx);
-    try addCommand(b, &ctx);
-}
 
-fn addCommand(b: *std.Build, ctx: *Context) !void {
-    const build_docs = b.step("docs", "Build the docs");
-    build_docs.dependOn(&b.addInstallDirectory(.{
-        .source_dir = b.addObject(.{
-            .name = name,
-            .root_module = ctx.mod.?,
-        }).getEmittedDocs(),
-        .install_dir = .prefix,
-        .install_subdir = "docs",
-    }).step);
-
-    const build_examples = b.step("examples", "Build examples");
-    for (ctx.examples_exe.items) |r| build_examples.dependOn(&r.step);
-
-    const test_all = b.step("test", "Run all tests");
-
-    const test_u = b.step("test-unit", "Run unit tests");
-    test_u.dependOn(&ctx.mod_test.?.step);
-
-    const test_e = b.step("test-examples", "Run example tests");
-    for (ctx.examples_test.items) |r| test_e.dependOn(&r.step);
-
-    const test_i = b.step("test-integration", "Run integration tests");
-    for (ctx.integration_test.items) |r| test_i.dependOn(&r.step);
-    for (ctx.integration_test_run.items) |r| test_i.dependOn(&r.step);
-    for (ctx.integration_test_error.items) |c| test_i.dependOn(&c.step);
-
-    test_all.dependOn(test_u);
-    test_all.dependOn(test_e);
-    test_all.dependOn(test_i);
+    if (ctx.test_unit != null and ctx.test_examples != null and ctx.test_integration != null) {
+        const test_all = b.step("test", "Run all tests");
+        if (ctx.test_unit) |step| test_all.dependOn(step);
+        if (ctx.test_examples) |step| test_all.dependOn(step);
+        if (ctx.test_integration) |step| test_all.dependOn(step);
+        sortCommand(b);
+    }
 }
 
 fn addModule(b: *std.Build, ctx: *Context) !void {
@@ -59,6 +34,7 @@ fn addModule(b: *std.Build, ctx: *Context) !void {
         .target = ctx.target,
         .optimize = ctx.optimize,
     });
+
     const exe = b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/root.zig"),
@@ -67,13 +43,26 @@ fn addModule(b: *std.Build, ctx: *Context) !void {
             .link_libc = true,
         }),
     });
-    ctx.mod_test = b.addRunArtifact(exe);
+
+    const step_docs = b.step("docs", "Build the docs");
+    step_docs.dependOn(&b.addInstallDirectory(.{
+        .source_dir = exe.getEmittedDocs(),
+        .install_dir = .prefix,
+        .install_subdir = "docs",
+    }).step);
+
+    const step_test = b.step("test-unit", "Run unit tests");
+    step_test.dependOn(&b.addRunArtifact(exe).step);
+    ctx.test_unit = step_test;
 }
 
 fn addExamples(b: *std.Build, ctx: *Context) !void {
     if (helper.notExistDir(b, "examples")) return;
 
-    const gpa = b.allocator;
+    const step_build = b.step("examples", "Build examples");
+    const step_test = b.step("test-examples", "Run example tests");
+    ctx.test_examples = step_test;
+
     inline for (static.tests_with_examples) |example| {
         const exe = b.addExecutable(.{
             .name = example.name,
@@ -84,17 +73,22 @@ fn addExamples(b: *std.Build, ctx: *Context) !void {
                 .imports = &.{.{ .name = name, .module = ctx.mod.? }},
             }),
         });
+
         const run = b.addRunArtifact(exe);
         run.cwd = exe.getEmittedBinDirectory();
         if (example.expectStdErrMatch) |e| run.expectStdErrMatch(e);
         if (example.expectStdOutMatch) |e| run.expectStdOutMatch(e);
-        try ctx.examples_test.append(gpa, run);
-        try ctx.examples_exe.append(gpa, b.addInstallArtifact(exe, .{}));
+
+        step_build.dependOn(&b.addInstallArtifact(exe, .{}).step);
+        step_test.dependOn(&run.step);
     }
 }
 
 fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
     if (helper.notExistDir(b, "tests")) return;
+
+    const step_test = b.step("test-integration", "Run integraion tests");
+    ctx.test_integration = step_test;
 
     inline for (static.tests) |t| {
         const exe = b.addTest(.{
@@ -106,7 +100,7 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
                 .imports = &.{.{ .name = name, .module = ctx.mod.? }},
             }),
         });
-        try ctx.integration_test.append(b.allocator, b.addRunArtifact(exe));
+        step_test.dependOn(&b.addRunArtifact(exe).step);
     }
     inline for (static.tests_with_run) |t| {
         const exe = b.addExecutable(.{
@@ -118,7 +112,7 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
                 .imports = &.{.{ .name = name, .module = ctx.mod.? }},
             }),
         });
-        try ctx.integration_test_run.append(b.allocator, b.addRunArtifact(exe));
+        step_test.dependOn(&b.addRunArtifact(exe).step);
     }
     inline for (static.tests_with_error) |t| {
         const exe = b.addExecutable(.{
@@ -131,8 +125,36 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
             }),
         });
         exe.expect_errors = .{ .contains = t.err };
-        try ctx.integration_test_error.append(b.allocator, exe);
+        step_test.dependOn(&exe.step);
     }
+}
+
+fn sortCommand(b: *std.Build) void {
+    const SortContext = struct {
+        ahm: *@TypeOf(b.top_level_steps),
+
+        const priority: std.StaticStringMap(u8) = .initComptime(.{
+            .{ "docs", 1 },
+            .{ "examples", 2 },
+            .{ "test", 3 },
+            .{ "test-unit", 4 },
+            .{ "test-examples", 5 },
+            .{ "test-integration", 6 },
+        });
+
+        pub fn lessThan(self: @This(), a_idx: usize, b_idx: usize) bool {
+            const keys = self.ahm.keys();
+            const a_name = keys[a_idx];
+            const b_name = keys[b_idx];
+            const a_prio = priority.get(a_name) orelse 0;
+            const b_prio = priority.get(b_name) orelse 0;
+            if (a_prio != b_prio) return a_prio < b_prio;
+            return std.mem.lessThan(u8, a_name, b_name);
+        }
+    };
+
+    const ctx: SortContext = .{ .ahm = &b.top_level_steps };
+    b.top_level_steps.sort(ctx);
 }
 
 const Context = struct {
@@ -141,13 +163,9 @@ const Context = struct {
 
     mod: ?*std.Build.Module = null,
 
-    examples_exe: std.ArrayList(*std.Build.Step.InstallArtifact) = .empty,
-
-    mod_test: ?*std.Build.Step.Run = null,
-    examples_test: std.ArrayList(*std.Build.Step.Run) = .empty,
-    integration_test: std.ArrayList(*std.Build.Step.Run) = .empty,
-    integration_test_run: std.ArrayList(*std.Build.Step.Run) = .empty,
-    integration_test_error: std.ArrayList(*std.Build.Step.Compile) = .empty,
+    test_unit: ?*std.Build.Step = null,
+    test_examples: ?*std.Build.Step = null,
+    test_integration: ?*std.Build.Step = null,
 };
 
 const static = struct {
