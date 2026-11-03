@@ -51,7 +51,9 @@ pub fn deinit(io: std.Io) void {
 /// immediately, including for other threads.
 ///
 /// - Thread-safe.
-pub fn setLevel(level: std.log.Level) void {
+pub fn setLevel(io: std.Io, level: std.log.Level) void {
+    mutex.lockUncancelable(io);
+    defer mutex.unlock(io);
     Logger.global.setLevel(level);
 }
 
