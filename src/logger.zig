@@ -152,7 +152,7 @@ const NonBlockingLoggerWriter = struct {
 
     inline fn notNeedFlushWhenErr(self: @This()) bool {
         // 发生截断时需要flush
-        return self.err.? != Error.Truncated;
+        return if (self.err) |e| e != Error.Truncated else false;
     }
 
     fn drain(
