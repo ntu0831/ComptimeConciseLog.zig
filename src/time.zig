@@ -30,9 +30,10 @@ pub const TimeZone = struct {
         std.debug.assert(offset <= comptime max.toSeconds());
         std.debug.assert(offset >= comptime min.toSeconds());
         const total_minutes = @divTrunc(offset, 60);
+        const total_minutes_abs = @divTrunc(@abs(offset), 60);
         return .{
             .hour = @intCast(@divTrunc(total_minutes, min_per_hour)),
-            .minute = @intCast(@rem(total_minutes, min_per_hour)),
+            .minute = @intCast(@rem(total_minutes_abs, min_per_hour)),
         };
     }
 
