@@ -10,7 +10,8 @@ const Config = @import("config.zig").Config;
 
 var mutex: std.Io.Mutex = .init;
 
-pub const InitError = std.Io.ConcurrentError || std.mem.Allocator.Error || std.Io.File.OpenError || error{Initialized};
+pub const InitError = error{Initialized} || std.Io.ConcurrentError || std.mem.Allocator.Error ||
+    std.Io.Writer.Error || std.Io.File.OpenError || std.Io.File.SeekError || std.Io.File.LengthError;
 
 /// Initializes the global logger with `config`.
 ///

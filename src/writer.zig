@@ -30,16 +30,16 @@ pub const RawOutputWriter = struct {
         fw: std.Io.File.Writer,
 
         pub fn init(gpa: std.mem.Allocator, io: std.Io, path: []const u8, buf_size: usize) !@This() {
-            const f = std.Io.Dir.cwd().openFile(io, path, .{ .mode = .read_write }) catch |e| switch (e) {
-                error.FileNotFound => try std.Io.Dir.cwd().createFile(io, path, .{}),
-                else => return e,
-            };
+            const f = try std.Io.Dir.cwd().createFile(io, path, .{ .truncate = false });
             errdefer f.close(io);
 
             const buffer = try gpa.alloc(u8, buf_size);
             errdefer gpa.free(buffer);
 
-            return .{ .file = f, .buf = buffer, .fw = f.writer(io, buffer) };
+            var fw = f.writer(io, buffer);
+            try fw.seekTo(try f.length(io));
+
+            return .{ .file = f, .buf = buffer, .fw = fw };
         }
 
         pub fn deinit(self: @This(), gpa: std.mem.Allocator, io: std.Io) void {
