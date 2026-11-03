@@ -19,24 +19,6 @@ const Pool = struct {
     size: usize = 0,
 };
 
-const RunMode = union(enum) {
-    blocking: Blocking,
-    non_blocking: NonBlocking,
-
-    pub const Blocking = struct {
-        writer_mutex: std.Io.Mutex = .init,
-    };
-
-    pub const NonBlocking = struct {
-        pool: Pool,
-        pool_policy: PoolExhaustionPolicy,
-        record_policy: RecordExhaustionPolicy,
-        tasks: std.Io.Group = .init,
-        running: bool = false, // run tasks
-        kind: enum { async, concurrent } = .concurrent,
-    };
-};
-
 pub const OutputWriter = struct {
     interface: *std.Io.Writer,
     kind: Kind,
