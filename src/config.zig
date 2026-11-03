@@ -221,8 +221,7 @@ pub const Pattern = struct {
 
     /// Renders the custom `{#id}` fields of `tokens`.
     ///
-    /// Must be non-null if `tokens` contains a `custom` token, otherwise
-    /// `ComptimeConciseLog.init` fails with `error.UserFormatterNull`.
+    /// Must be non-null if `tokens` contains a `custom` token.
     formatter: ?UserFormatter = null,
 
     /// The default pattern, `[{@RFC3339Z}] [{@scope}]({@LEVEL}): {@msg}`,

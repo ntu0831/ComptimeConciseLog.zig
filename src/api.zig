@@ -10,10 +10,7 @@ const Config = @import("config.zig").Config;
 
 var mutex: std.Io.Mutex = .init;
 
-pub const InitError = std.Io.ConcurrentError || std.mem.Allocator.Error || std.Io.File.OpenError || error{
-    Initialized,
-    UserFormatterNull,
-};
+pub const InitError = std.Io.ConcurrentError || std.mem.Allocator.Error || std.Io.File.OpenError || error{Initialized};
 
 /// Initializes the global logger with `config`.
 ///
@@ -22,10 +19,6 @@ pub const InitError = std.Io.ConcurrentError || std.mem.Allocator.Error || std.I
 /// Calling it while a logger is initialized returns `error.Initialized`; call
 /// `deinit` first to reconfigure. A failed call leaves no logger behind, so it
 /// can be retried.
-///
-/// Also returns `error.UserFormatterNull` if `config.pattern` has custom fields
-/// but no formatter, and forwards the errors of allocating and opening the
-/// output.
 ///
 /// - Thread-safe: concurrent calls are serialized.
 pub fn init(io: std.Io, gpa: std.mem.Allocator, config: Config) InitError!void {
