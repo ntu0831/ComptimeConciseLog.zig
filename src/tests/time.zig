@@ -8,10 +8,22 @@ const TimeZone = struct {
     const formatStrftimeZ = time.TimeZone.formatStrftimeZ;
     const formatRFC3339 = time.TimeZone.formatRFC3339;
     const format = time.TimeZone.format;
+    const fromSeconds = time.TimeZone.fromSeconds;
 
     test format {}
     test formatStrftimeZ {}
     test formatRFC3339 {}
+    test fromSeconds {
+        for ([_]struct { seconds: isize, expected: time.TimeZone }{
+            .{ .seconds = 0, .expected = .{ .hour = 0, .minute = 0 } },
+            .{ .seconds = 3600, .expected = .{ .hour = 1, .minute = 0 } },
+            .{ .seconds = 19800, .expected = .{ .hour = 5, .minute = 30 } },
+            .{ .seconds = -12600, .expected = .{ .hour = -3, .minute = 30 } },
+            .{ .seconds = -3600, .expected = .{ .hour = -1, .minute = 0 } },
+            .{ .seconds = -43200, .expected = .{ .hour = -12, .minute = 0 } }, // min
+            .{ .seconds = 50400, .expected = .{ .hour = 14, .minute = 0 } }, // max
+        }) |c| try expectEqual(time.TimeZone.fromSeconds(c.seconds), c.expected);
+    }
 };
 
 const RFC3339 = struct {
