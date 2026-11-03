@@ -159,6 +159,10 @@ pub const Context = struct {
                     inline else => unreachable,
                 },
                 .pool = blk: {
+                    std.debug.assert(cfg.buffer.count != 0);
+                    std.debug.assert(cfg.buffer.size != 0);
+                    if (cfg.on_pool_exhausted == .block) std.debug.assert(options.max_buffers_per_record <= cfg.buffer.count);
+
                     const size = cfg.buffer.size;
                     const count = cfg.buffer.count;
                     const pool_buffer_storage = try arena.alloc(u8, size * count);

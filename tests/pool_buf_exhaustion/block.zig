@@ -7,6 +7,7 @@ const Log = cclog.Log(.pool_buf_exhaustion);
 
 pub const cclog_options: cclog.Options = .{
     .pattern = .parse("{@msg}"),
+    .max_buffers_per_record = 4,
     .mode = .{
         .async = .{
             .on_pool_exhausted = .block,
