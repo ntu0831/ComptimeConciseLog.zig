@@ -52,7 +52,3 @@ pub const RawOutputWriter = struct {
         }
     };
 };
-
-pub const BridgeWriter = struct {
-    //
-};
