@@ -62,7 +62,7 @@ pub const DateTime = struct {
     second: u8,
     millisecond: u16,
     microsecond: u16,
-    nanosecond: u16 = 0,
+    nanosecond: u16,
 
     pub fn toRFC3339(self: @This()) RFC3339 {
         if (self.year < 1) {
@@ -273,6 +273,7 @@ const CivilDate = struct {
             .second = @intCast(seconds_since_midnight % s_per_min),
             .millisecond = @intCast(sub_second_us / us_per_ms),
             .microsecond = @intCast(sub_second_us % us_per_ms),
+            .nanosecond = 0,
         };
     }
 };
