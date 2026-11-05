@@ -192,11 +192,17 @@ const static = struct {
         "tests/api/log_before_init.zig",
     };
     const tests_by_run = &.{
+        "tests/logging/sync.zig",
+        "tests/logging/async.zig",
+        "tests/logging/concurrent.zig",
+
         "tests/pattern/pattern.zig",
         "tests/pattern/formatter.zig",
+
         "tests/pool_buf_exhaustion/drop.zig",
         "tests/pool_buf_exhaustion/block.zig",
         "tests/pool_buf_exhaustion/truncate.zig",
+
         "tests/record_buf_exhaustion/drop.zig",
         "tests/record_buf_exhaustion/truncate.zig",
     };
