@@ -18,14 +18,7 @@ pub fn build(b: *std.Build) !void {
     try addModule(b, &ctx);
     try addExamples(b, &ctx);
     try addIntegrationTest(b, &ctx);
-
-    if (ctx.test_unit != null and ctx.test_examples != null and ctx.test_integration != null) {
-        const test_all = b.step("test", "Run all tests");
-        if (ctx.test_unit) |step| test_all.dependOn(step);
-        if (ctx.test_examples) |step| test_all.dependOn(step);
-        if (ctx.test_integration) |step| test_all.dependOn(step);
-        sortCommand(b);
-    }
+    try addTest(b, &ctx);
 }
 
 fn addModule(b: *std.Build, ctx: *Context) !void {
@@ -127,6 +120,16 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
         exe.expect_errors = .{ .contains = t.err };
         step_test.dependOn(&exe.step);
     }
+}
+
+fn addTest(b: *std.Build, ctx: *Context) !void {
+    const test_all = b.step("test", "Run all tests");
+
+    if (ctx.test_unit) |step| test_all.dependOn(step);
+    if (ctx.test_examples) |step| test_all.dependOn(step);
+    if (ctx.test_integration) |step| test_all.dependOn(step);
+
+    sortCommand(b);
 }
 
 fn sortCommand(b: *std.Build) void {
