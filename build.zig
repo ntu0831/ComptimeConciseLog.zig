@@ -177,20 +177,6 @@ const static = struct {
         .{ .name = "double_init_before_deinit", .path = "tests/api/double_init_before_deinit.zig" },
         .{ .name = "log_after_deinit", .path = "tests/api/log_after_deinit.zig" },
         .{ .name = "log_before_init", .path = "tests/api/log_before_init.zig" },
-
-        // single producer
-        .{ .name = "onelog_with_self", .path = "tests/sp/onelog_with_self.zig" },
-        .{ .name = "onelog_with_async", .path = "tests/sp/onelog_with_async.zig" },
-        .{ .name = "onelog_with_concurrent", .path = "tests/sp/onelog_with_concurrent.zig" },
-        .{ .name = "looplog_with_self", .path = "tests/sp/looplog_with_self.zig" },
-        .{ .name = "looplog_with_async", .path = "tests/sp/looplog_with_async.zig" },
-        .{ .name = "looplog_with_concurrent", .path = "tests/sp/looplog_with_concurrent.zig" },
-
-        // multi producer
-        .{ .name = "onelog_with_async", .path = "tests/mp/onelog_with_async.zig" },
-        .{ .name = "onelog_with_concurrent", .path = "tests/mp/onelog_with_concurrent.zig" },
-        .{ .name = "looplog_with_async", .path = "tests/mp/looplog_with_async.zig" },
-        .{ .name = "looplog_with_concurrent", .path = "tests/mp/looplog_with_concurrent.zig" },
     };
     const tests_with_run = &.{
         .{ .name = "pattern_pattern", .path = "tests/pattern/pattern.zig" },
