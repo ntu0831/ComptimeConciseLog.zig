@@ -63,7 +63,7 @@ fn addExamples(b: *std.Build, ctx: *Context) !void {
     const step_test = b.step("test-examples", "Run example tests");
     ctx.test_examples = step_test;
 
-    inline for (static.tests_with_examples) |example| {
+    inline for (static.examples) |example| {
         const exe = b.addExecutable(.{
             .name = example.name,
             .root_module = b.createModule(.{
@@ -90,11 +90,11 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
     const step_test = b.step("test-integration", "Run integraion tests");
     ctx.test_integration = step_test;
 
-    inline for (static.tests) |t| {
+    inline for (static.tests) |path| {
         const exe = b.addTest(.{
-            .name = t.name,
+            .name = helper.nameFromPath(b, path),
             .root_module = b.createModule(.{
-                .root_source_file = b.path(t.path),
+                .root_source_file = b.path(path),
                 .target = ctx.target,
                 .optimize = ctx.optimize,
                 .imports = &.{.{ .name = name, .module = ctx.mod.? }},
@@ -102,11 +102,11 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
         });
         step_test.dependOn(&b.addRunArtifact(exe).step);
     }
-    inline for (static.tests_with_run) |t| {
+    inline for (static.tests_by_run) |path| {
         const exe = b.addExecutable(.{
-            .name = t.name,
+            .name = helper.nameFromPath(b, path),
             .root_module = b.createModule(.{
-                .root_source_file = b.path(t.path),
+                .root_source_file = b.path(path),
                 .target = ctx.target,
                 .optimize = ctx.optimize,
                 .imports = &.{.{ .name = name, .module = ctx.mod.? }},
@@ -114,9 +114,9 @@ fn addIntegrationTest(b: *std.Build, ctx: *Context) !void {
         });
         step_test.dependOn(&b.addRunArtifact(exe).step);
     }
-    inline for (static.tests_with_error) |t| {
+    inline for (static.tests_by_compile_error) |t| {
         const exe = b.addExecutable(.{
-            .name = t.name,
+            .name = helper.nameFromPath(b, t.path),
             .root_module = b.createModule(.{
                 .root_source_file = b.path(t.path),
                 .target = ctx.target,
@@ -169,29 +169,7 @@ const Context = struct {
 };
 
 const static = struct {
-    const tests = [_]struct { name: []const u8, path: []const u8 }{
-        .{ .name = "init_after_deinit", .path = "tests/api/init_after_deinit.zig" },
-        .{ .name = "deinit_before_init", .path = "tests/api/deinit_before_init.zig" },
-        .{ .name = "double_deinit", .path = "tests/api/double_deinit.zig" },
-        .{ .name = "double_init_after_deinit", .path = "tests/api/double_init_after_deinit.zig" },
-        .{ .name = "double_init_before_deinit", .path = "tests/api/double_init_before_deinit.zig" },
-        .{ .name = "log_after_deinit", .path = "tests/api/log_after_deinit.zig" },
-        .{ .name = "log_before_init", .path = "tests/api/log_before_init.zig" },
-    };
-    const tests_with_run = &.{
-        .{ .name = "pattern_pattern", .path = "tests/pattern/pattern.zig" },
-        .{ .name = "pattern_formatter", .path = "tests/pattern/formatter.zig" },
-        .{ .name = "pool_buf_exhaustion_drop", .path = "tests/pool_buf_exhaustion/drop.zig" },
-        .{ .name = "pool_buf_exhaustion_block", .path = "tests/pool_buf_exhaustion/block.zig" },
-        .{ .name = "pool_buf_exhaustion_truncate", .path = "tests/pool_buf_exhaustion/truncate.zig" },
-        .{ .name = "record_buf_exhaustion_drop", .path = "tests/record_buf_exhaustion/drop.zig" },
-        .{ .name = "record_buf_exhaustion_truncate", .path = "tests/record_buf_exhaustion/truncate.zig" },
-    };
-    const tests_with_error = &.{
-        .{ .name = "pattern_pattern", .path = "tests/pattern/error.zig", .err = "userFormatter is null" },
-    };
-
-    const tests_with_examples = [_]struct { name: []const u8, path: []const u8, expectStdOutMatch: ?[]const u8 = null, expectStdErrMatch: ?[]const u8 = null }{
+    const examples = [_]struct { name: []const u8, path: []const u8, expectStdOutMatch: ?[]const u8 = null, expectStdErrMatch: ?[]const u8 = null }{
         .{ .name = "minimal", .path = "examples/minimal.zig", .expectStdOutMatch = "" },
         .{ .name = "stdlog", .path = "examples/stdlog.zig", .expectStdOutMatch = "" },
         .{ .name = "pattern", .path = "examples/pattern.zig", .expectStdOutMatch = "" },
@@ -200,6 +178,28 @@ const static = struct {
         .{ .name = "output_writer", .path = "examples/output_writer.zig", .expectStdErrMatch = "" },
         .{ .name = "errorhandling", .path = "examples/errorhandling.zig", .expectStdErrMatch = "" },
     };
+
+    const tests = .{
+        "tests/api/init_after_deinit.zig",
+        "tests/api/deinit_before_init.zig",
+        "tests/api/double_deinit.zig",
+        "tests/api/double_init_after_deinit.zig",
+        "tests/api/double_init_before_deinit.zig",
+        "tests/api/log_after_deinit.zig",
+        "tests/api/log_before_init.zig",
+    };
+    const tests_by_run = &.{
+        "tests/pattern/pattern.zig",
+        "tests/pattern/formatter.zig",
+        "tests/pool_buf_exhaustion/drop.zig",
+        "tests/pool_buf_exhaustion/block.zig",
+        "tests/pool_buf_exhaustion/truncate.zig",
+        "tests/record_buf_exhaustion/drop.zig",
+        "tests/record_buf_exhaustion/truncate.zig",
+    };
+    const tests_by_compile_error = &.{
+        .{ .path = "tests/pattern/error.zig", .err = "userFormatter is null" },
+    };
 };
 
 const helper = struct {
@@ -207,5 +207,20 @@ const helper = struct {
         const dir = b.root.openDir(b.graph.io, path, .{}) catch return true;
         defer dir.close(b.graph.io);
         return false;
+    }
+
+    fn nameFromPath(b: *std.Build, path: []const u8) []u8 {
+        const path_trimed = if (std.mem.endsWith(u8, path, ".zig"))
+            path[0 .. path.len - ".zig".len]
+        else
+            path;
+
+        const bin = b.allocator.dupe(u8, path_trimed) catch @panic("OOM");
+
+        for (bin, 0..) |char, i| {
+            if (char == '/') bin[i] = '-';
+        }
+
+        return bin;
     }
 };
